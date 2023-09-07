@@ -1,6 +1,6 @@
 {
   "name": "@mksvk/mksvknpm",
-  "version": "1.0.0-test-o",
+  "version": "1.0.0-canary.6",
   "description": "",
   "main": "index.js",
   "scripts": {

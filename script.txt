@@ -1,0 +1,78 @@
+
+const axios = require('axios');
+
+const githubToken = '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'; 
+const packageType = 'npm'; 
+const packageName = 'mksvknpm'; 
+
+const listVersionsUrl = `https://api.github.com/user/packages/${packageType}/${packageName}/versions`;
+
+const headers = {
+  Authorization: `Bearer ${githubToken}`,
+  Accept: 'application/vnd.github.v3+json',
+};
+
+function separateAndKeepLatestVersions(versions) {
+  const versionCategories = {};
+
+  versions.forEach((version) => {
+    const labelsMatch = version.name.match(/-(\w+)/);
+    if (labelsMatch) {
+      const label = labelsMatch[1];
+      if (!versionCategories[label]) {
+        versionCategories[label] = [];
+      }
+      versionCategories[label].push(version);
+    }
+  });
+
+  return versionCategories;
+}
+
+
+
+async function deleteVersionsExceptLatestThree(categorizedVersions) {
+  try {
+    for (const category in categorizedVersions) {
+      const versions = categorizedVersions[category];
+
+      versions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      // Keep only the latest 3 versions
+      const versionsToDelete = versions.slice(5);
+
+      for (const version of versionsToDelete) {
+        const deleteUrl = version.url; // Use the URL to delete the version
+        const response = await axios.delete(deleteUrl, { headers });
+
+        if (response.status === 204) {
+          console.log(`Deleted version: ${version.name} in category: ${category}`);
+        } else {
+          console.error(`Failed to delete version: ${version.name} in category: ${category}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error:', error.message);
+  }
+}
+
+
+async function listAndDeletePackageVersions() {
+  let versions; // Declare the variable here
+
+  try {
+    const response = await axios.get(listVersionsUrl, { headers });
+
+    if (response.status === 200 && response.data) {
+      versions = response.data;
+      const categorizedVersions = separateAndKeepLatestVersions(versions);
+      deleteVersionsExceptLatestThree(categorizedVersions);
+    }
+  } catch (error) {
+    console.error('Error:', error.message);
+  }
+}
+
+listAndDeletePackageVersions();
+
